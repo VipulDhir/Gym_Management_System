@@ -95,3 +95,34 @@ def delete_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
+def update_data():
+    try:
+        data = request.get_json()
+        P_id = data.get('P_id')
+        Pname = data.get('Pname')
+        Category = data.get('Category')
+        Price = data.get('Price')
+        Qty = data.get('Qty')
+
+        cnx = mysql.connector.connect(user='root',password='1234',host='localhost',database='Fitness')
+        cursor = cnx.cursor()
+        query = "SELECT * FROM ProductRecord WHERE P_id = %s"
+        cursor.execute(query, (P_id,))
+        product = cursor.fetchone()
+
+        if product:
+            qry = "UPDATE ProductRecord SET Pname=%s, Category=%s, Price=%s, Qty=%s WHERE P_id=%s"
+            data = (Pname, Category, Price, Qty, P_id)
+            cursor.execute(qry, data)
+            cnx.commit()
+            cursor.close()
+            cnx.close()
+            return jsonify({"message": "Record updated successfully."}), 200
+        else:
+            return jsonify({"message": "Product not found."}), 404
+
+    except mysql.connector.Error as err:
+        print(err)
+        return jsonify({"error": "An error occurred while processing your request."}), 500
+

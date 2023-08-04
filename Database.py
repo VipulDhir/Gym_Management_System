@@ -15,5 +15,8 @@ def TablesCreate():
     Cursor=cnx.cursor()
     Cursor.execute(
         "CREATE TABLE IF NOT EXISTS ProductRecord(P_id int(2), Pname varchar(20), Category varchar(20), Price int(10),Qty int(2))")
+    Cursor.execute(
+        "CREATE TABLE IF NOT EXISTS Member(Mno int(2), Mname varchar(20), Date_of_Buying Date, Addr varchar(24), Mob varchar(10))")
+    Cursor.execute("CREATE TABLE IF NOT EXISTS Price(P_id int(2), Mno int(2), Total_Price int(15))")
     Cursor.close()
     cnx.close()
