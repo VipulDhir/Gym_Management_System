@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from mysql.connector import errorcode
 import mysql.connector
-from datetime import date
+from datetime import date,datetime,timedelta
 
 
 def insert_member():
@@ -9,16 +9,13 @@ def insert_member():
         data = request.get_json()
         mno = data.get('mno')
         mname = data.get('mname')
-        DD = data.get('DD')
-        MM = data.get('MM')
-        YY = data.get('YY')
         addr = data.get('addr')
         mob = data.get('mob')
 
         cnx = mysql.connector.connect(user='root', password='1234', host='localhost', database='Fitness')
         cursor = cnx.cursor()
-        qry = "INSERT INTO Member VALUES(%s, %s, %s, %s, %s)"
-        data = (mno, mname, date(YY, MM, DD), addr, mob)
+        qry = "INSERT INTO Member VALUES(%s, %s, %s, %s)"
+        data = (mno, mname, addr, mob)
         cursor.execute(qry, data)
         cnx.commit()
         cursor.close()
@@ -74,13 +71,8 @@ def update_member_from_database(data):
 
         mno=data['mno']
         mname=data['mname']
-        DD=data['DD']
-        MM=data['MM']
-        YY=data['YY']
         addr=data['addr']
         mob=data['mob']
-
-        Date_of_Buying=date(YY,MM,DD)
 
         query="SELECT * FROM member WHERE mno = %s"
         rec_srch=(mno,)
@@ -89,8 +81,8 @@ def update_member_from_database(data):
         if not cursor.fetchall():
             return "Member with provided Member Code not found."
 
-        qry="UPDATE member SET mname=%s,  Date_of_Buying=%s, addr=%s, mob=%s WHERE mno=%s"
-        data=(mname, Date_of_Buying,addr,mob,mno)
+        qry="UPDATE member SET mname=%s, addr=%s, mob=%s WHERE mno=%s"
+        data=(mname,addr,mob,mno)
         cursor.execute(qry,data)
         cnx.commit()
         cursor.close()
@@ -108,7 +100,7 @@ def update_member_from_database(data):
 
 def update_member():
     data=request.get_json()
-    if 'mno' in data and 'mname' in data and 'DD' in data and 'MM' in data and 'YY' in data and 'addr' in data and 'mob' in data:
+    if 'mno' in data and 'mname' in data and 'addr' in data and 'mob' in data:
         result=update_member_from_database(data)
         return jsonify({"result": result})
     else:
@@ -133,8 +125,9 @@ def fetch_member_from_database():
 def search_member():
     data = fetch_member_from_database()
     if data:
-        columns = ['mno', 'mname', 'Date_of_Buying','addr','mob']
+        columns = ['mno', 'mname', 'addr','mob']
         records = [dict(zip(columns, row)) for row in data]
         return jsonify({"data": records})
     else:
         return jsonify({"message": "Failed to fetch data."}), 500
+

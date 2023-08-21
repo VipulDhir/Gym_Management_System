@@ -1,13 +1,14 @@
 import mysql.connector
 from flask import request,jsonify
+import random
 
 
-def insert_data_to_database(P_id, Pname, Category, Price, Qty):
+def insert_data_to_database(P_id, Pname, Category, Price, Qty, Machine_level):
     try:
         cnx = mysql.connector.connect(user='root', password='1234', host='localhost', database='Fitness')
         cursor = cnx.cursor()
-        qry = "INSERT INTO ProductRecord (P_id, Pname, Category, Price, Qty) VALUES (%s, %s, %s, %s, %s)"
-        data = (P_id, Pname, Category, Price, Qty)
+        qry = "INSERT INTO ProductRecord (P_id, Pname, Category, Price, Qty , Machine_level) VALUES (%s, %s, %s, %s, %s ,%s)"
+        data = (P_id, Pname, Category, Price, Qty, Machine_level)
         cursor.execute(qry, data)
         cnx.commit()
         cursor.close()
@@ -26,8 +27,9 @@ def add_data():
         Category = request_data['Category']
         Price = request_data['Price']
         Qty = request_data['Qty']
+        Machine_level =request_data['Machine_level']
 
-        if insert_data_to_database(P_id, Pname, Category, Price, Qty):
+        if insert_data_to_database(P_id, Pname, Category, Price, Qty, Machine_level):
             return jsonify({"message": "Record Inserted successfully."})
         else:
             return jsonify({"message": "Failed to insert record."}), 500
@@ -53,7 +55,7 @@ def fetch_data_from_database():
 def get_data():
     data = fetch_data_from_database()
     if data:
-        columns = ['P_id', 'Pname', 'Category', 'Price', 'Qty']
+        columns = ['P_id', 'Pname', 'Category', 'Price', 'Qty','Machine_level']
         records = [dict(zip(columns, row)) for row in data]
         return jsonify({"data": records})
     else:
@@ -104,6 +106,7 @@ def update_data():
         Category = data.get('Category')
         Price = data.get('Price')
         Qty = data.get('Qty')
+        Machine_level =data.get('Machine_level')
 
         cnx = mysql.connector.connect(user='root',password='1234',host='localhost',database='Fitness')
         cursor = cnx.cursor()
@@ -112,8 +115,8 @@ def update_data():
         product = cursor.fetchone()
 
         if product:
-            qry = "UPDATE ProductRecord SET Pname=%s, Category=%s, Price=%s, Qty=%s WHERE P_id=%s"
-            data = (Pname, Category, Price, Qty, P_id)
+            qry = "UPDATE ProductRecord SET Pname=%s, Category=%s, Price=%s, Qty=%s , Machine_level=%s WHERE P_id=%s"
+            data = (Pname, Category, Price, Qty, Machine_level, P_id)
             cursor.execute(qry, data)
             cnx.commit()
             cursor.close()
@@ -125,4 +128,56 @@ def update_data():
     except mysql.connector.Error as err:
         print(err)
         return jsonify({"error": "An error occurred while processing your request."}), 500
+
+def get_machines_by_budget_and_level():
+    try:
+        data = request.get_json()
+        machine_level = data.get('machine_level')
+        budget = data.get('budget')
+
+        if machine_level is None or budget is None:
+            return jsonify({"error": "machine_level and budget are required in the request body."}), 400
+
+        return get_machines_within_budget(machine_level, budget)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def get_machines_within_budget(machine_level, budget):
+    try:
+        cnx = mysql.connector.connect(user='root', password='1234', host='localhost', database='Fitness')
+        cursor = cnx.cursor()
+        qry = "SELECT * FROM ProductRecord WHERE Machine_level = %s AND Price <= %s"
+        data = (machine_level, budget)
+        cursor.execute(qry, data)
+        machines = cursor.fetchall()
+        cursor.close()
+        cnx.close()
+
+        filtered_machines = []
+        columns = ['P_id', 'Pname', 'Machine_level', 'Price']
+
+        for machine in machines:
+            filtered_machines.append(dict(zip(columns, machine)))
+
+        selected_machines = []
+        total_cost = 0
+
+        while total_cost <= budget and filtered_machines:
+            machine = random.choice(filtered_machines)
+            machine_cost = machine['Price']
+            if total_cost + machine_cost <= budget:
+                selected_machines.append(machine)
+                total_cost += machine_cost
+            filtered_machines.remove(machine)
+
+        if not selected_machines:
+            return jsonify({"message": "No machines found within the given budget and level."}), 404
+
+        return jsonify(selected_machines), 200
+
+    except mysql.connector.Error as err:
+        print(err)
+        return jsonify({"error": "An error occurred while processing your request."}), 500
+
 
